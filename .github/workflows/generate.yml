@@ -1,11 +1,38 @@
-name: Generate Calendar
+name: Generate Lunisolar OS Calendar
 
 on:
-  workflow_dispatch
+  workflow_dispatch:
+    inputs:
+      year:
+        description: "Year to generate (e.g. 2026)"
+        required: true
+        default: "2026"
 
 jobs:
-  build:
+  generate:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Generate ICS
+        run: |
+          python src/generate_lunisolar_os.py --year ${{ inputs.year }} --out calendar/lunisolar_os_${{ inputs.year }}.ics
+          cp calendar/lunisolar_os_${{ inputs.year }}.ics calendar/lunisolar_os_latest.ics
+
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add calendar/lunisolar_os_${{ inputs.year }}.ics calendar/lunisolar_os_latest.ics
+          git commit -m "Generate Lunisolar OS calendar for ${{ inputs.year }}" || echo "Nothing to commit"
+          git push
